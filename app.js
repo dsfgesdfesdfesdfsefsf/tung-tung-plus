@@ -4,6 +4,7 @@ import { Upload } from "https://esm.sh/tus-js-client@4";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET, SIGNED_URL_SECONDS } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const supabaseReady = SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith("INSERISCI_");
 let supabase = null;
 let isAdmin = false;
@@ -259,6 +260,10 @@ async function init() {
     const cover = $("episode-cover").files[0];
     const title = $("episode-title").value.trim();
     if (!video || !title) return setMessage("upload-message", "Inserisci un titolo e seleziona un video.", true);
+    if (video.size > MAX_VIDEO_SIZE) {
+      $("upload-progress").classList.add("hidden");
+      return setMessage("upload-message", "The file is too large — massimo 50 MB.", true);
+    }
     const publish = $("publish-btn");
     publish.disabled = true;
     setMessage("upload-message", "Preparazione del caricamento…");
