@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Upload } from "https://esm.sh/tus-js-client@4";
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET, SIGNED_URL_SECONDS } from "./config.js";
 
@@ -46,6 +47,65 @@ async function getSignedUrl(path) {
   const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(path, SIGNED_URL_SECONDS);
   if (error) throw error;
   return data.signedUrl;
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes)) return "0 MB";
+  return bytes >= 1024 ** 3
+    ? `${(bytes / 1024 ** 3).toFixed(2)} GB`
+    : `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+}
+
+function setUploadProgress(percent, uploaded, total, label = "Caricamento video…") {
+  const safePercent = Math.max(0, Math.min(100, percent));
+  $("upload-progress").classList.remove("hidden");
+  $("upload-progress-label").textContent = label;
+  $("upload-progress-percent").textContent = `${Math.round(safePercent)}%`;
+  $("upload-progress-bar").style.width = `${safePercent}%`;
+  $("upload-progress-detail").textContent = `${formatFileSize(uploaded)} / ${formatFileSize(total)}`;
+}
+
+function friendlyUploadError(error) {
+  const message = String(error?.message || error || "Errore sconosciuto");
+  const lower = message.toLowerCase();
+  if (error?.status === 413 || /too large|payload too large|maximum allowed size|exceeded.*size|file size limit/.test(lower)) {
+    return "The file is too large";
+  }
+  return message;
+}
+
+async function uploadVideoResumable(file, path, onProgress) {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error("Sessione scaduta. Accedi di nuovo.");
+
+  const projectId = new URL(SUPABASE_URL).hostname.split(".")[0];
+  const endpoint = `https://${projectId}.storage.supabase.co/storage/v1/upload/resumable`;
+
+  await new Promise((resolve, reject) => {
+    const upload = new Upload(file, {
+      endpoint,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        apikey: SUPABASE_ANON_KEY,
+        "x-upsert": "false"
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: 6 * 1024 * 1024,
+      metadata: {
+        bucketName: STORAGE_BUCKET,
+        objectName: path,
+        contentType: file.type || "video/mp4",
+        cacheControl: "3600"
+      },
+      onError: reject,
+      onProgress: (bytesUploaded, bytesTotal) => onProgress(bytesUploaded, bytesTotal),
+      onSuccess: resolve
+    });
+    upload.start();
+  });
 }
 
 async function loadEpisodes() {
@@ -201,8 +261,8 @@ async function init() {
     if (!video || !title) return setMessage("upload-message", "Inserisci un titolo e seleziona un video.", true);
     const publish = $("publish-btn");
     publish.disabled = true;
-    $("upload-progress").classList.remove("hidden");
-    setMessage("upload-message", "Caricamento in corso. Non chiudere questa pagina.");
+    setMessage("upload-message", "Preparazione del caricamento…");
+    setUploadProgress(0, 0, video.size);
     const id = crypto.randomUUID();
     const ext = (video.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "");
     const videoPath = `videos/${id}.${ext}`;
@@ -210,10 +270,13 @@ async function init() {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError || new Error("Sessione scaduta.");
-      const { error: videoError } = await supabase.storage.from(STORAGE_BUCKET).upload(videoPath, video, {
-        contentType: video.type || "video/mp4", upsert: false
+
+      setMessage("upload-message", "Caricamento video in corso. Non chiudere questa pagina.");
+      await uploadVideoResumable(video, videoPath, (uploaded, total) => {
+        setUploadProgress((uploaded / total) * 100, uploaded, total);
       });
-      if (videoError) throw videoError;
+
+      setUploadProgress(100, video.size, video.size, cover ? "Caricamento copertina…" : "Video caricato");
       if (cover) {
         const coverExt = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
         coverPath = `covers/${id}.${coverExt}`;
@@ -235,7 +298,7 @@ async function init() {
     } catch (error) {
       // Remove uploaded objects if a later step fails.
       await supabase.storage.from(STORAGE_BUCKET).remove([videoPath, ...(coverPath ? [coverPath] : [])]).catch(() => {});
-      setMessage("upload-message", `Pubblicazione non riuscita: ${error.message}`, true);
+      setMessage("upload-message", friendlyUploadError(error), true);
     } finally {
       publish.disabled = false;
       $("upload-progress").classList.add("hidden");
