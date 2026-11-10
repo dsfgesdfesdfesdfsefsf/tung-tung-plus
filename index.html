@@ -75,7 +75,7 @@
         <label>Descrizione<textarea id="episode-description" rows="3" placeholder="Di cosa parla questo episodio?"></textarea></label>
         <label>Video <span class="optional">MP4 consigliato</span><input id="episode-video" type="file" accept="video/*" required></label>
         <label>Copertina <span class="optional">facoltativa</span><input id="episode-cover" type="file" accept="image/*"></label>
-        <div id="upload-progress" class="progress-wrap hidden"><div class="progress-track"><div class="progress-bar"></div></div><span>Caricamento in corso… non chiudere la pagina.</span></div>
+        <div id="upload-progress" class="progress-wrap hidden"><div class="progress-heading"><span id="upload-progress-label">Caricamento video…</span><strong id="upload-progress-percent">0%</strong></div><div class="progress-track"><div id="upload-progress-bar" class="progress-bar"></div></div><span id="upload-progress-detail">0 MB / 0 MB</span></div>
         <p id="upload-message" class="message" role="status"></p>
         <button id="publish-btn" class="button primary full" type="submit">Carica e pubblica</button>
       </form>
