@@ -17,7 +17,7 @@
     <a class="brand" href="./" aria-label="TUNG TUNG+ home"><span class="brand-mark">T+</span><span>TUNG TUNG<span class="accent">+</span></span></a>
     <div class="top-actions">
       <span id="user-label" class="user-label"></span>
-      <button id="logout-btn" class="button ghost hidden" type="button">Esci</button>
+      
     </div>
   </header>
 
@@ -28,16 +28,15 @@
       <p>Apri <code>config.js</code> e inserisci l'URL del progetto Supabase e la chiave anon/public. Non inserire mai la service_role key.</p>
     </section>
 
-    <section id="auth-view" class="panel auth-panel hidden">
-      <div class="eyebrow">IL TUO ARCHIVIO VIDEO</div>
-      <h1>Ogni episodio,<br><span class="gradient-text">un nuovo capitolo.</span></h1>
-      <p class="muted">Accedi per guardare gli episodi di TUNG TUNG+.</p>
+    <section id="auth-view" class="panel auth-panel">
+      <div class="eyebrow">ACCESSO TUNG TUNG+</div>
+      <h1>Benvenuto su<br><span class="gradient-text">TUNG TUNG+</span></h1>
+      <p class="muted">Inserisci il Secret Code per abilitare la pubblicazione degli episodi. Puoi anche entrare come visitatore.</p>
       <form id="auth-form">
-        <label>Email<input id="email" type="email" autocomplete="email" placeholder="nome@email.com" required></label>
-        <label>Password<input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="Almeno 8 caratteri" required></label>
-        <button id="auth-submit" class="button primary full" type="submit">Accedi</button>
+        <label>Secret Code<input id="secret-code" type="password" autocomplete="off" placeholder="Inserisci il codice"></label>
+        <button id="auth-submit" class="button primary full" type="submit">Sblocca pubblicazione</button>
       </form>
-      <button id="toggle-auth" class="text-button" type="button">Non hai un account? Registrati</button>
+      <button id="visitor-entry" class="text-button" type="button">Continua senza codice</button>
       <p id="auth-message" class="message" role="status"></p>
     </section>
 
