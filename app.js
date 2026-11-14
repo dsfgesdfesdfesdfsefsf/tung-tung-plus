@@ -19,9 +19,10 @@ let activeEpisode = null;
 let episodesCache = [];
 
 function showView(id) {
-  ["setup-view", "auth-view", "app-view"].forEach((view) =>
-    $(view).classList.toggle("hidden", view !== id)
-  );
+  ["setup-view", "auth-view", "app-view"].forEach((view) => {
+    const element = $(view);
+    if (element) element.classList.toggle("hidden", view !== id);
+  });
 }
 
 function escapeHtml(value = "") {
@@ -38,6 +39,7 @@ function toast(message) {
 
 function setMessage(id, message, error = false) {
   const el = $(id);
+  if (!el) return;
   el.textContent = message || "";
   el.classList.toggle("error", error);
 }
@@ -46,6 +48,13 @@ function formatFileSize(bytes) {
   return bytes >= 1024 ** 3
     ? `${(bytes / 1024 ** 3).toFixed(2)} GB`
     : `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+}
+
+function formatEpisodeDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function setUploadProgress(percent, uploaded, total, label = "Caricamento video…") {
@@ -109,9 +118,98 @@ async function uploadVideoResumable(file, path, onProgress) {
   });
 }
 
+function createEpisodeCard(episode, coverUrl) {
+  const card = document.createElement("article");
+  card.className = "episode-card";
+
+  const posterButton = document.createElement("button");
+  posterButton.className = "poster-button";
+  posterButton.type = "button";
+  posterButton.setAttribute("aria-label", `Guarda ${episode.title}`);
+
+  if (coverUrl) {
+    const image = document.createElement("img");
+    image.className = "poster";
+    image.src = coverUrl;
+    image.alt = "";
+    image.loading = "lazy";
+    posterButton.appendChild(image);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "poster poster-placeholder";
+    placeholder.innerHTML = 'TUNG TUNG<span style="color:#00d7e8">+</span>';
+    posterButton.appendChild(placeholder);
+  }
+
+  const overlay = document.createElement("span");
+  overlay.className = "play-overlay";
+  overlay.innerHTML = "<span>▶</span>";
+  posterButton.appendChild(overlay);
+
+  const copy = document.createElement("div");
+  copy.className = "episode-copy";
+
+  const title = document.createElement("h3");
+  title.textContent = episode.title || "Episodio senza titolo";
+
+  const meta = document.createElement("p");
+  const number = episode.episode_number ? `EP. ${episode.episode_number}` : "TUNG TUNG WAR";
+  const date = formatEpisodeDate(episode.created_at);
+  meta.textContent = [number, date].filter(Boolean).join(" · ");
+
+  copy.append(title, meta);
+  card.append(posterButton, copy);
+  posterButton.addEventListener("click", () => openEpisode(episode));
+  return card;
+}
+
+function renderRail(title, episodes, covers, suffix) {
+  if (!episodes.length) return null;
+  const section = document.createElement("section");
+  section.className = "rail-section";
+
+  const heading = document.createElement("div");
+  heading.className = "section-heading";
+  const h2 = document.createElement("h2");
+  h2.textContent = title;
+  const count = document.createElement("small");
+  count.textContent = String(episodes.length);
+  h2.appendChild(count);
+  heading.appendChild(h2);
+
+  const wrap = document.createElement("div");
+  wrap.className = "rail-wrap";
+  const rail = document.createElement("div");
+  rail.className = "episode-rail";
+  rail.id = `rail-${suffix}`;
+
+  episodes.forEach((episode) => {
+    rail.appendChild(createEpisodeCard(episode, covers.get(episode.id) || ""));
+  });
+
+  const previous = document.createElement("button");
+  previous.className = "rail-arrow prev";
+  previous.type = "button";
+  previous.setAttribute("aria-label", "Episodi precedenti");
+  previous.textContent = "‹";
+  previous.addEventListener("click", () => rail.scrollBy({ left: -rail.clientWidth * 0.8, behavior: "smooth" }));
+
+  const next = document.createElement("button");
+  next.className = "rail-arrow next";
+  next.type = "button";
+  next.setAttribute("aria-label", "Episodi successivi");
+  next.textContent = "›";
+  next.addEventListener("click", () => rail.scrollBy({ left: rail.clientWidth * 0.8, behavior: "smooth" }));
+
+  wrap.append(previous, rail, next);
+  section.append(heading, wrap);
+  return section;
+}
+
 async function loadEpisodes() {
   $("loading").classList.remove("hidden");
-  $("episode-grid").innerHTML = "";
+  $("hero-slot").innerHTML = "";
+  $("episode-rows").innerHTML = "";
   $("empty-state").classList.add("hidden");
   setMessage("catalog-message", "");
 
@@ -127,81 +225,76 @@ async function loadEpisodes() {
   }
 
   episodesCache = data || [];
-  
-  let heroContainer = document.querySelector(".hero-dynamic");
-  if (!heroContainer) {
-    heroContainer = document.createElement("section");
-    heroContainer.className = "hero-dynamic";
-    document.querySelector(".catalog-section").before(heroContainer);
-  }
+  $("episode-count").textContent = `${episodesCache.length} EPISODI`;
 
   if (!episodesCache.length) {
     $("empty-state").classList.remove("hidden");
-    heroContainer.classList.add("hidden");
     return;
   }
 
-  heroContainer.classList.remove("hidden");
+  const coverPairs = await Promise.all(episodesCache.map(async (episode) => {
+    if (!episode.cover_path) return [episode.id, ""];
+    const url = await getSignedUrl(episode.cover_path).catch(() => "");
+    return [episode.id, url];
+  }));
+  const covers = new Map(coverPairs);
 
-  // Primo episodio in evidenza nell'Hero Banner
-  const latestEpisode = episodesCache[0];
-  const restEpisodes = episodesCache.slice(1);
-
-  const latestCover = latestEpisode.cover_path
-    ? await getSignedUrl(latestEpisode.cover_path).catch(() => "")
-    : "";
-
-  heroContainer.style.backgroundImage = latestCover ? `url('${latestCover}')` : "none";
-
-  heroContainer.innerHTML = `
-    <div class="hero-dynamic-content">
-      <div class="eyebrow"><span class="live-dot"></span> IN EVIDENZA • ULTIMO USCITO</div>
-      <h1>${escapeHtml(latestEpisode.title)}</h1>
-      <p>${escapeHtml(latestEpisode.description || "Nessuna descrizione disponibile per questo episodio.")}</p>
-      <div class="hero-buttons">
-        <button id="hero-play-btn" class="button primary" type="button">▶ Riproduci Ora</button>
-      </div>
-    </div>
-  `;
-
-  heroContainer.querySelector("#hero-play-btn").addEventListener("click", () => openEpisode(latestEpisode));
-
-  // Gestione etichetta sezione rimanenti
-  const catalogHeading = document.querySelector(".catalog-section h2");
-  if (catalogHeading) {
-    catalogHeading.textContent = restEpisodes.length > 0 ? "Altri episodi" : "Tutti gli episodi";
+  const latest = episodesCache[0];
+  const hero = document.createElement("section");
+  hero.className = "hero-dynamic";
+  const latestCover = covers.get(latest.id);
+  if (latestCover) {
+    hero.style.backgroundImage = `linear-gradient(90deg,rgba(0,0,0,.94),rgba(0,0,0,.32)),url("${latestCover}")`;
   }
 
-  for (const episode of restEpisodes) {
-    const cover = episode.cover_path
-      ? await getSignedUrl(episode.cover_path).catch(() => "")
-      : "";
-    const card = document.createElement("article");
-    card.className = "episode-card";
-    card.innerHTML = `
-      <button class="poster-button" type="button" aria-label="Guarda ${escapeHtml(episode.title)}">
-        ${cover
-          ? `<img class="poster" src="${escapeHtml(cover)}" alt="">`
-          : `<div class="poster poster-placeholder"><span>T<span class="accent">+</span></span></div>`}
-        <span class="play-overlay"><span>▶</span></span>
-      </button>
-      <div class="episode-copy">
-        <div class="episode-kicker">${episode.episode_number ? `EPISODIO ${escapeHtml(episode.episode_number)}` : "TUNG TUNG+"}</div>
-        <h3>${escapeHtml(episode.title)}</h3>
-        <p>${escapeHtml(episode.description || "Nessuna descrizione.")}</p>
-      </div>`;
-    card.querySelector(".poster-button").addEventListener("click", () => openEpisode(episode));
-    $("episode-grid").appendChild(card);
-  }
+  const content = document.createElement("div");
+  content.className = "hero-content";
+  const kicker = document.createElement("div");
+  kicker.className = "hero-kicker";
+  kicker.innerHTML = '<span class="live-dot"></span> TUNG TUNG WAR · ULTIMO EPISODIO';
+
+  const title = document.createElement("h1");
+  title.textContent = latest.title || "TUNG TUNG WAR";
+
+  const meta = document.createElement("div");
+  meta.className = "hero-meta";
+  const number = latest.episode_number ? `EPISODIO ${latest.episode_number}` : "NUOVO EPISODIO";
+  const date = formatEpisodeDate(latest.created_at);
+  meta.textContent = [number, date].filter(Boolean).join("  ·  ");
+
+  const description = document.createElement("p");
+  description.className = "hero-description";
+  description.textContent = latest.description || "Guarda l'ultimo episodio di TUNG TUNG WAR.";
+
+  const actions = document.createElement("div");
+  actions.className = "hero-actions";
+  const play = document.createElement("button");
+  play.className = "button primary hero-play";
+  play.type = "button";
+  play.textContent = "▶  PLAY";
+  play.addEventListener("click", () => openEpisode(latest));
+  const badge = document.createElement("span");
+  badge.className = "hero-number";
+  badge.textContent = number;
+  actions.append(play, badge);
+  content.append(kicker, title, meta, description, actions);
+  hero.appendChild(content);
+  $("hero-slot").appendChild(hero);
+
+  const featuredEpisodes = episodesCache.slice(0, Math.min(10, episodesCache.length));
+  const featured = renderRail("IN EVIDENZA", featuredEpisodes, covers, "featured");
+  const all = renderRail("LATEST", episodesCache, covers, "latest");
+  if (featured) $("episode-rows").appendChild(featured);
+  if (all) $("episode-rows").appendChild(all);
 }
 
 async function openEpisode(episode) {
   activeEpisode = episode;
   $("player-title").textContent = episode.title;
   $("player-number").textContent = episode.episode_number
-    ? `EPISODIO ${episode.episode_number}`
-    : "TUNG TUNG+";
-  $("player-description").textContent = episode.description || "Nessuna descrizione.";
+    ? `TUNG TUNG WAR // EPISODIO ${episode.episode_number}`
+    : "TUNG TUNG+ // PLAYER";
+  $("player-description").textContent = episode.description || "Nessuna descrizione disponibile.";
   $("delete-episode").classList.toggle("hidden", !isAdmin);
   $("player-modal").classList.remove("hidden");
 
@@ -222,8 +315,10 @@ async function openEpisode(episode) {
 
 function enterApp(adminMode) {
   isAdmin = adminMode;
+  $("auth-view").classList.add("hidden");
   $("open-upload").classList.toggle("hidden", !isAdmin);
-  $("user-label").textContent = isAdmin ? "Amministratore" : "Visitatore";
+  $("sign-in-open").classList.toggle("hidden", isAdmin);
+  $("user-label").textContent = isAdmin ? "ADMIN" : "";
   showView("app-view");
   loadEpisodes();
 }
@@ -242,7 +337,11 @@ async function init() {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
   });
 
-  showView("auth-view");
+  $("sign-in-open").addEventListener("click", () => {
+    $("auth-view").classList.remove("hidden");
+    $("auth-message").textContent = "";
+    $("secret-code").value = "";
+  });
 
   $("auth-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -268,8 +367,9 @@ async function init() {
 
   document.querySelectorAll("[data-close]").forEach((button) => {
     button.addEventListener("click", () => {
-      $(button.dataset.close).classList.add("hidden");
-      if (button.dataset.close === "player-modal") {
+      const target = button.dataset.close;
+      $(target).classList.add("hidden");
+      if (target === "player-modal") {
         $("video-player").pause();
         $("video-player").removeAttribute("src");
         $("video-player").load();
@@ -281,9 +381,17 @@ async function init() {
     modal.addEventListener("click", (event) => {
       if (event.target === modal) {
         modal.classList.add("hidden");
-        if (modal.id === "player-modal") $("video-player").pause();
+        if (modal.id === "player-modal") {
+          $("video-player").pause();
+          $("video-player").removeAttribute("src");
+          $("video-player").load();
+        }
       }
     });
+  });
+
+  $("auth-view").addEventListener("click", (event) => {
+    if (event.target === $("auth-view")) $("auth-view").classList.add("hidden");
   });
 
   $("upload-form").addEventListener("submit", async (event) => {
@@ -371,12 +479,16 @@ async function init() {
       $("player-modal").classList.add("hidden");
       $("video-player").pause();
       $("video-player").removeAttribute("src");
+      $("video-player").load();
       await loadEpisodes();
       toast("Episodio eliminato.");
     } catch (error) {
       toast(`Errore durante l'eliminazione: ${error.message}`);
     }
   });
+
+  // The public catalogue opens immediately; the admin code is requested only for publishing.
+  enterApp(false);
 }
 
 init().catch((error) => {
