@@ -82,7 +82,6 @@ async function uploadVideoResumable(file, path, onProgress) {
   await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", endpoint, true);
-    // The public anon key is used because this version has no user accounts.
     xhr.setRequestHeader("authorization", `Bearer ${SUPABASE_ANON_KEY}`);
     xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
@@ -128,12 +127,52 @@ async function loadEpisodes() {
   }
 
   episodesCache = data || [];
+  
+  let heroContainer = document.querySelector(".hero-dynamic");
+  if (!heroContainer) {
+    heroContainer = document.createElement("section");
+    heroContainer.className = "hero-dynamic";
+    document.querySelector(".catalog-section").before(heroContainer);
+  }
+
   if (!episodesCache.length) {
     $("empty-state").classList.remove("hidden");
+    heroContainer.classList.add("hidden");
     return;
   }
 
-  for (const episode of episodesCache) {
+  heroContainer.classList.remove("hidden");
+
+  // Primo episodio in evidenza nell'Hero Banner
+  const latestEpisode = episodesCache[0];
+  const restEpisodes = episodesCache.slice(1);
+
+  const latestCover = latestEpisode.cover_path
+    ? await getSignedUrl(latestEpisode.cover_path).catch(() => "")
+    : "";
+
+  heroContainer.style.backgroundImage = latestCover ? `url('${latestCover}')` : "none";
+
+  heroContainer.innerHTML = `
+    <div class="hero-dynamic-content">
+      <div class="eyebrow"><span class="live-dot"></span> IN EVIDENZA • ULTIMO USCITO</div>
+      <h1>${escapeHtml(latestEpisode.title)}</h1>
+      <p>${escapeHtml(latestEpisode.description || "Nessuna descrizione disponibile per questo episodio.")}</p>
+      <div class="hero-buttons">
+        <button id="hero-play-btn" class="button primary" type="button">▶ Riproduci Ora</button>
+      </div>
+    </div>
+  `;
+
+  heroContainer.querySelector("#hero-play-btn").addEventListener("click", () => openEpisode(latestEpisode));
+
+  // Gestione etichetta sezione rimanenti
+  const catalogHeading = document.querySelector(".catalog-section h2");
+  if (catalogHeading) {
+    catalogHeading.textContent = restEpisodes.length > 0 ? "Altri episodi" : "Tutti gli episodi";
+  }
+
+  for (const episode of restEpisodes) {
     const cover = episode.cover_path
       ? await getSignedUrl(episode.cover_path).catch(() => "")
       : "";
