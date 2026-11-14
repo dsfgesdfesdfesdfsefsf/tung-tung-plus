@@ -1,96 +1,141 @@
 <!doctype html>
-<html lang="it">
+<html lang="it" class="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111018">
-  <meta name="description" content="Guarda gli episodi di TUNG TUNG+.">
-  <title>TUNG TUNG+</title>
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Accedi alla rete di sorveglianza e guarda gli episodi di TUNG TUNG+.">
+  <title>TUNG TUNG+ // SYSTEM</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./assets/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
   <header class="topbar">
-    <a class="brand" href="./" aria-label="TUNG TUNG+ home"><span class="brand-mark">T+</span><span>TUNG TUNG<span class="accent">+</span></span></a>
+    <a class="brand" href="./" aria-label="TUNG TUNG+ home">
+      <span class="brand-mark">T+</span>
+      <span>TUNG TUNG<span class="accent">+</span></span>
+    </a>
     <div class="top-actions">
+      <span class="system-badge"><span class="status-dot"></span>SYSTEM ONLINE</span>
       <span id="user-label" class="user-label"></span>
-      
     </div>
   </header>
 
   <main>
-    <section id="setup-view" class="panel narrow hidden">
-      <div class="eyebrow">CONFIGURAZIONE INIZIALE</div>
-      <h1>Collega il tuo archivio</h1>
-      <p>Apri <code>config.js</code> e inserisci l'URL del progetto Supabase e la chiave anon/public. Non inserire mai la service_role key.</p>
+    <section id="setup-view" class="shubcam-window narrow hidden">
+      <div class="window-header">
+        <span>CONFIG_MODULE // INIT</span>
+        <span class="status-text">WAITING</span>
+      </div>
+      <div class="window-body">
+        <div class="eyebrow">CONFIGURAZIONE INIZIALE</div>
+        <h1>Collega l'archivio</h1>
+        <p class="muted">Apri <code>config.js</code> e inserisci l'URL del progetto Supabase e la chiave anon/public. Non inserire mai la service_role key.</p>
+      </div>
     </section>
 
-    <section id="auth-view" class="panel auth-panel">
-      <div class="eyebrow">ACCESSO TUNG TUNG+</div>
-      <h1>Benvenuto su<br><span class="gradient-text">TUNG TUNG+</span></h1>
-      <p class="muted">Inserisci il Secret Code per abilitare la pubblicazione degli episodi. Puoi anche entrare come visitatore.</p>
-      <form id="auth-form">
-        <label>Secret Code<input id="secret-code" type="password" autocomplete="off" placeholder="Inserisci il codice"></label>
-        <button id="auth-submit" class="button primary full" type="submit">Sblocca pubblicazione</button>
-      </form>
-      <button id="visitor-entry" class="text-button" type="button">Continua senza codice</button>
-      <p id="auth-message" class="message" role="status"></p>
+    <section id="auth-view" class="shubcam-window auth-panel">
+      <div class="window-header">
+        <span>SECURITY_GATE // AUTH</span>
+        <span class="status-text online"><span class="status-dot"></span>SYSTEM ONLINE</span>
+      </div>
+      <div class="window-body">
+        <div class="auth-logo">T<span class="accent">+</span></div>
+        <div class="eyebrow center">SECURITY MONITORING SYSTEM</div>
+        <h1 class="center">TUNG TUNG<span class="accent">+</span></h1>
+        <p class="muted center">Accedi alla rete dell'archivio. Inserisci il codice di sicurezza per sbloccare l'upload oppure entra come visitatore.</p>
+        <form id="auth-form">
+          <label>SECURITY CLEARANCE CODE
+            <input id="secret-code" type="password" autocomplete="off" placeholder="••••••••••••">
+          </label>
+          <button id="auth-submit" class="button primary full" type="submit">ENTER FACILITY [ADMIN]</button>
+        </form>
+        <button id="visitor-entry" class="button ghost full" type="button">ACCESS AS VISITOR</button>
+        <p id="auth-message" class="message center" role="status"></p>
+      </div>
     </section>
 
     <section id="app-view" class="hidden">
-      <section class="hero">
-        <div class="hero-content">
-          <div class="eyebrow"><span class="live-dot"></span> LA TUA SERIE • STREAMING</div>
-          <h1>Benvenuto su<br><span class="gradient-text">TUNG TUNG+</span></h1>
-          <p>Le storie, gli scontri e i momenti più importanti della serie. Tutti in un unico posto.</p>
-          <div class="hero-meta"><span class="meta-pill">EPISODI</span><span class="meta-pill">ON DEMAND</span><span class="meta-pill">MULTIDISPOSITIVO</span></div>
-        </div>
-        <div class="hero-art" aria-hidden="true"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="hero-emblem">T<span>+</span></div><div class="spark spark-a"></div><div class="spark spark-b"></div></div>
-      </section>
+      <!-- L'Hero dinamico verrà inserito qui da app.js -->
 
       <section class="catalog-section">
         <div class="section-heading">
-          <div><div class="eyebrow">LA LIBRERIA</div><h2>Tutti gli episodi</h2><p class="muted small">Scegli un episodio e premi play.</p></div>
-          <button id="open-upload" class="button primary hidden" type="button">＋ Pubblica episodio</button>
+          <div>
+            <div class="eyebrow">SURVEILLANCE FEED // ARCHIVE</div>
+            <h2>Tutti gli episodi</h2>
+            <p class="muted small">Seleziona un feed video per avviare la riproduzione.</p>
+          </div>
+          <button id="open-upload" class="button primary hidden" type="button">+ UPLOAD FEED</button>
         </div>
-        <div id="loading" class="loading"><span class="spinner"></span> Caricamento episodi…</div>
+        <div id="loading" class="loading"><span class="spinner"></span> DECODING ARCHIVE FEEDS…</div>
         <div id="episode-grid" class="episode-grid"></div>
-        <div id="empty-state" class="empty-state hidden"><div class="empty-icon">▶</div><h3>Ancora nessun episodio</h3><p>Quando verrà pubblicato il primo episodio, lo troverai qui.</p></div>
+        <div id="empty-state" class="empty-state hidden">
+          <div class="empty-icon">▶</div>
+          <h3>NO SIGNAL DETECTED</h3>
+          <p>Nessun episodio presente nell'archivio al momento.</p>
+        </div>
         <p id="catalog-message" class="message" role="status"></p>
       </section>
     </section>
   </main>
 
   <div id="upload-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="upload-title">
-    <div class="modal-card">
-      <button class="modal-close" data-close="upload-modal" aria-label="Chiudi">×</button>
-      <div class="eyebrow">SOLO AMMINISTRATORE</div><h2 id="upload-title">Pubblica un episodio</h2>
-      <form id="upload-form">
-        <label>Titolo<input id="episode-title" maxlength="160" required placeholder="Es. Episodio 12"></label>
-        <label>Numero episodio <span class="optional">(facoltativo)</span><input id="episode-number" type="number" min="1" step="1" placeholder="12"></label>
-        <label>Descrizione<textarea id="episode-description" rows="3" placeholder="Di cosa parla questo episodio?"></textarea></label>
-        <label>Video <span class="optional">MP4 consigliato • massimo 50 MB</span><input id="episode-video" type="file" accept="video/*" required></label>
-        <label>Copertina <span class="optional">facoltativa</span><input id="episode-cover" type="file" accept="image/*"></label>
-        <div id="upload-progress" class="progress-wrap hidden"><div class="progress-heading"><span id="upload-progress-label">Caricamento video…</span><strong id="upload-progress-percent">0%</strong></div><div class="progress-track"><div id="upload-progress-bar" class="progress-bar"></div></div><span id="upload-progress-detail">0 MB / 0 MB</span></div>
-        <p id="upload-message" class="message" role="status"></p>
-        <button id="publish-btn" class="button primary full" type="submit">Carica e pubblica</button>
-      </form>
+    <div class="shubcam-window modal-card">
+      <div class="window-header">
+        <span>UPLOAD_TERMINAL // ADMIN_ONLY</span>
+        <button class="modal-close" data-close="upload-modal" aria-label="Chiudi">×</button>
+      </div>
+      <div class="window-body">
+        <h2 id="upload-title">Pubblica un episodio</h2>
+        <form id="upload-form">
+          <label>TITOLO FEED<input id="episode-title" maxlength="160" required placeholder="Es. Episodio 12"></label>
+          <label>NUMERO EPISODIO <span class="optional">(FACOLTATIVO)</span><input id="episode-number" type="number" min="1" step="1" placeholder="12"></label>
+          <label>LOG / DESCRIZIONE<textarea id="episode-description" rows="3" placeholder="Dettagli della registrazione..."></textarea></label>
+          <label>FILE VIDEO <span class="optional">MP4 • MAX 50 MB</span><input id="episode-video" type="file" accept="video/*" required></label>
+          <label>THUMBNAIL <span class="optional">(FACOLTATIVA)</span><input id="episode-cover" type="file" accept="image/*"></label>
+          <div id="upload-progress" class="progress-wrap hidden">
+            <div class="progress-heading">
+              <span id="upload-progress-label">UPLOADING DATA…</span>
+              <strong id="upload-progress-percent">0%</strong>
+            </div>
+            <div class="progress-track"><div id="upload-progress-bar" class="progress-bar"></div></div>
+            <span id="upload-progress-detail">0 MB / 0 MB</span>
+          </div>
+          <p id="upload-message" class="message" role="status"></p>
+          <button id="publish-btn" class="button primary full" type="submit">TRANSMIT & PUBLISH</button>
+        </form>
+      </div>
     </div>
   </div>
 
   <div id="player-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="player-title">
-    <div class="player-card">
-      <button class="modal-close player-close" data-close="player-modal" aria-label="Chiudi">×</button>
+    <div class="shubcam-window player-card">
+      <div class="window-header">
+        <span id="player-number">LIVE_PLAYBACK // CAM_01</span>
+        <button class="modal-close" data-close="player-modal" aria-label="Chiudi">×</button>
+      </div>
       <video id="video-player" controls playsinline preload="metadata"></video>
-      <div class="player-info"><div class="eyebrow" id="player-number"></div><h2 id="player-title"></h2><p id="player-description"></p><button id="delete-episode" class="button danger hidden" type="button">Elimina episodio</button></div>
+      <div class="player-info">
+        <h2 id="player-title"></h2>
+        <p id="player-description"></p>
+        <button id="delete-episode" class="button danger hidden" type="button">PURGE RECORDING</button>
+      </div>
     </div>
   </div>
 
-  <footer><span class="brand small-brand"><span class="brand-mark">T+</span>TUNG TUNG<span class="accent">+</span></span><span>© <span id="year"></span> TUNG TUNG+. Archivio privato.</span></footer>
-  <div id="toast" class="toast" role="status"></div>
+  <footer>
+    <span class="brand small-brand"><span class="brand-mark">T+</span>TUNG TUNG<span class="accent">+</span></span>
+    <span>© <span id="year"></span> TUNG TUNG+ // FACILITY NETWORK</span>
+  </footer>
+
+  <!-- Toast stile Sonner Dark -->
+  <div id="toast" class="sonner-toast" role="status"></div>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
