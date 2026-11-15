@@ -6,6 +6,15 @@ import {
   SIGNED_URL_SECONDS
 } from "./config.js";
 
+const ARCHIVE_EPISODES = [{
+  id: "archive-session-1",
+  title: "Session 1 — Shorts 1080×1920",
+  description: "Primo video pubblicato su TUNG TUNG+.",
+  episode_number: null,
+  created_at: "2026-11-15T00:00:00Z",
+  archive_url: "https://archive.org/embed/session1_Shorts_1080x1920"
+}];
+
 const $ = (id) => document.getElementById(id);
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const SECRET_CODE = "Maurizio12@";
@@ -220,11 +229,11 @@ async function loadEpisodes() {
 
   $("loading").classList.add("hidden");
   if (error) {
-    setMessage("catalog-message", `Errore nel caricamento: ${error.message}`, true);
-    return;
+    episodesCache = ARCHIVE_EPISODES;
+    setMessage("catalog-message", "Catalogo caricato da Internet Archive.");
+  } else {
+    episodesCache = (data && data.length) ? data : ARCHIVE_EPISODES;
   }
-
-  episodesCache = data || [];
   $("episode-count").textContent = `${episodesCache.length} EPISODI`;
 
   if (!episodesCache.length) {
@@ -299,12 +308,23 @@ async function openEpisode(episode) {
   $("player-modal").classList.remove("hidden");
 
   const video = $("video-player");
+  const archiveFrame = $("archive-player");
   video.pause();
+  video.classList.add("hidden");
   video.removeAttribute("src");
   video.load();
+  archiveFrame.classList.add("hidden");
+  archiveFrame.removeAttribute("src");
+
+  if (episode.archive_url) {
+    archiveFrame.src = episode.archive_url;
+    archiveFrame.classList.remove("hidden");
+    return;
+  }
 
   try {
     const url = await getSignedUrl(episode.video_path);
+    video.classList.remove("hidden");
     video.src = url;
     video.load();
     await video.play().catch(() => {});
@@ -373,6 +393,8 @@ async function init() {
         $("video-player").pause();
         $("video-player").removeAttribute("src");
         $("video-player").load();
+        $("archive-player").removeAttribute("src");
+        $("archive-player").classList.add("hidden");
       }
     });
   });
@@ -385,6 +407,8 @@ async function init() {
           $("video-player").pause();
           $("video-player").removeAttribute("src");
           $("video-player").load();
+          $("archive-player").removeAttribute("src");
+          $("archive-player").classList.add("hidden");
         }
       }
     });
