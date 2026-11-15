@@ -65,8 +65,14 @@
         <label>TITOLO EPISODIO<input id="episode-title" maxlength="160" required placeholder="Es. Tung Tung War — Episode 12"></label>
         <label>NUMERO EPISODIO <span class="optional">(FACOLTATIVO)</span><input id="episode-number" type="number" min="1" step="1" placeholder="12"></label>
         <label>DESCRIZIONE<textarea id="episode-description" rows="3" placeholder="Descrizione dell'episodio…"></textarea></label>
-        <label>VIDEO <span class="optional">MP4 • MAX 50 MB</span><input id="episode-video" type="file" accept="video/*" required></label>
         <label>MINIATURA <span class="optional">(FACOLTATIVA)</span><input id="episode-cover" type="file" accept="image/*"></label>
+        <label>LINK DEL VIDEO <span class="optional">LINK INTERNET ARCHIVE</span><input id="episode-video-link" type="url" required placeholder="https://archive.org/details/nome_video"></label>
+        <label>TIPO DI VIDEO
+          <select id="episode-type" required>
+            <option value="video">VIDEO</option>
+            <option value="short">SHORT</option>
+          </select>
+        </label>
         <div id="upload-progress" class="progress-wrap hidden"><div class="progress-heading"><span id="upload-progress-label">CARICAMENTO…</span><strong id="upload-progress-percent">0%</strong></div><div class="progress-track"><div id="upload-progress-bar" class="progress-bar"></div></div><span id="upload-progress-detail">0 MB / 0 MB</span></div>
         <p id="upload-message" class="message" role="status"></p>
         <button id="publish-btn" class="button primary full" type="submit">PUBBLICA EPISODIO</button>
