@@ -1,4 +1,4 @@
-const CACHE = "tung-tung-plus-shell-v3";
+const CACHE = "tung-tung-plus-shell-v4";
 const SHELL = ["./", "./index.html", "./styles.css", "./config.js", "./manifest.webmanifest", "./assets/icon-192.png", "./assets/icon-512.png"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
