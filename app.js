@@ -127,9 +127,9 @@ async function uploadVideoResumable(file, path, onProgress) {
   });
 }
 
-function createEpisodeCard(episode, coverUrl) {
+function createEpisodeCard(episode, coverUrl, variant = "landscape") {
   const card = document.createElement("article");
-  card.className = "episode-card";
+  card.className = `episode-card ${variant === "shorts" ? "episode-card-short" : ""}`;
 
   const posterButton = document.createElement("button");
   posterButton.className = "poster-button";
@@ -155,11 +155,17 @@ function createEpisodeCard(episode, coverUrl) {
   overlay.innerHTML = "<span>▶</span>";
   posterButton.appendChild(overlay);
 
+  const tag = document.createElement("span");
+  tag.className = "episode-tag";
+  tag.textContent = variant === "shorts" ? "▶ SHORT" : (episode.episode_number ? `EP. ${episode.episode_number}` : "TUNG TUNG+");
+  posterButton.appendChild(tag);
+
   const copy = document.createElement("div");
   copy.className = "episode-copy";
 
   const title = document.createElement("h3");
   title.textContent = episode.title || "Episodio senza titolo";
+  if (variant === "shorts") title.classList.add("short-title");
 
   const meta = document.createElement("p");
   const number = episode.episode_number ? `EP. ${episode.episode_number}` : "TUNG TUNG WAR";
@@ -172,10 +178,10 @@ function createEpisodeCard(episode, coverUrl) {
   return card;
 }
 
-function renderRail(title, episodes, covers, suffix) {
+function renderRail(title, episodes, covers, suffix, variant = "landscape") {
   if (!episodes.length) return null;
   const section = document.createElement("section");
-  section.className = "rail-section";
+  section.className = `rail-section rail-${variant}`;
 
   const heading = document.createElement("div");
   heading.className = "section-heading";
@@ -189,11 +195,11 @@ function renderRail(title, episodes, covers, suffix) {
   const wrap = document.createElement("div");
   wrap.className = "rail-wrap";
   const rail = document.createElement("div");
-  rail.className = "episode-rail";
+  rail.className = `episode-rail ${variant === "shorts" ? "shorts-rail" : ""}`;
   rail.id = `rail-${suffix}`;
 
   episodes.forEach((episode) => {
-    rail.appendChild(createEpisodeCard(episode, covers.get(episode.id) || ""));
+    rail.appendChild(createEpisodeCard(episode, covers.get(episode.id) || "", variant));
   });
 
   const previous = document.createElement("button");
@@ -290,11 +296,22 @@ async function loadEpisodes() {
   hero.appendChild(content);
   $("hero-slot").appendChild(hero);
 
-  const featuredEpisodes = episodesCache.slice(0, Math.min(10, episodesCache.length));
-  const featured = renderRail("IN EVIDENZA", featuredEpisodes, covers, "featured");
-  const all = renderRail("LATEST", episodesCache, covers, "latest");
-  if (featured) $("episode-rows").appendChild(featured);
-  if (all) $("episode-rows").appendChild(all);
+  const shortEpisodes = episodesCache.filter((episode) =>
+    /short|shorts/i.test(`${episode.title || ""} ${episode.description || ""}`) ||
+    Boolean(episode.is_short)
+  );
+  const moreEpisodes = episodesCache.length > 1
+    ? episodesCache.slice(1, 11)
+    : episodesCache.slice(0, 10);
+  const exploreEpisodes = episodesCache.slice();
+
+  const shorts = renderRail("SHORTS", shortEpisodes, covers, "shorts", "shorts");
+  const more = renderRail("MORE TO WATCH", moreEpisodes, covers, "more", "landscape");
+  const explore = renderRail("EXPLORE", exploreEpisodes, covers, "explore", "landscape");
+
+  if (shorts) $("episode-rows").appendChild(shorts);
+  if (more) $("episode-rows").appendChild(more);
+  if (explore) $("episode-rows").appendChild(explore);
 }
 
 async function openEpisode(episode) {
