@@ -8,6 +8,7 @@ import {
 
 const ARCHIVE_EPISODES = [{
   id: "archive-session-1",
+  identifier: "session1_Shorts_1080x1920",
   title: "Session 1 — Shorts 1080×1920",
   description: "Primo video pubblicato su TUNG TUNG+.",
   episode_number: null,
@@ -297,7 +298,7 @@ async function loadEpisodes() {
   $("hero-slot").appendChild(hero);
 
   const shortEpisodes = episodesCache.filter((episode) =>
-    /short|shorts/i.test(`${episode.title || ""} ${episode.description || ""}`) ||
+    /shorts/i.test(String(episode.identifier || "")) ||
     Boolean(episode.is_short)
   );
   const moreEpisodes = episodesCache.length > 1
