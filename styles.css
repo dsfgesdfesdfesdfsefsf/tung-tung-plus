@@ -41,3 +41,8 @@ label{display:grid;gap:7px;color:#aaa;font:700 10px var(--mono);letter-spacing:.
   .rail-section{margin-bottom:30px}
   .episode-copy h3{font-size:11px}
 }
+
+/* Archive.org link and video type selector */
+#upload-form select{width:100%;padding:12px;border:1px solid #333;border-radius:6px;background:#080808;color:#fff;font:12px var(--mono);outline:none}
+#upload-form select:focus{border-color:var(--cyan)}
+#episode-video-link{font-size:11px}
