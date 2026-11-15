@@ -299,6 +299,7 @@ async function loadEpisodes() {
 
   const shortEpisodes = episodesCache.filter((episode) =>
     /shorts/i.test(String(episode.identifier || "")) ||
+    String(episode.video_path || "").startsWith("archive-short:") ||
     Boolean(episode.is_short)
   );
   const moreEpisodes = episodesCache.length > 1
@@ -334,8 +335,9 @@ async function openEpisode(episode) {
   archiveFrame.classList.add("hidden");
   archiveFrame.removeAttribute("src");
 
-  if (episode.archive_url) {
-    archiveFrame.src = episode.archive_url;
+  if (episode.archive_url || String(episode.video_path || "").startsWith("archive-")) {
+    const archiveIdentifier = String(episode.video_path || "").replace(/^archive-(?:short|video):/, "");
+    archiveFrame.src = episode.archive_url || `https://archive.org/embed/${encodeURIComponent(archiveIdentifier)}`;
     archiveFrame.classList.remove("hidden");
     return;
   }
@@ -438,49 +440,46 @@ async function init() {
 
   $("upload-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!isAdmin) {
-      return setMessage("upload-message", "Inserisci il Secret Code per pubblicare.", true);
-    }
+    if (!isAdmin) return setMessage("upload-message", "Inserisci il Secret Code per pubblicare.", true);
 
-    const video = $("episode-video").files[0];
     const cover = $("episode-cover").files[0];
     const title = $("episode-title").value.trim();
+    const videoLink = $("episode-video-link").value.trim();
+    const videoType = $("episode-type").value;
+    if (!title || !videoLink) return setMessage("upload-message", "Inserisci il titolo e il link del video.", true);
 
-    if (!video || !title) {
-      return setMessage("upload-message", "Inserisci un titolo e seleziona un video.", true);
+    let parsedUrl;
+    try { parsedUrl = new URL(videoLink); }
+    catch (_) { return setMessage("upload-message", "Inserisci un link valido di Internet Archive.", true); }
+
+    if (!["archive.org", "www.archive.org"].includes(parsedUrl.hostname)) {
+      return setMessage("upload-message", "Per ora sono supportati i link di archive.org.", true);
     }
-    if (video.size > MAX_VIDEO_SIZE) {
-      $("upload-progress").classList.add("hidden");
-      return setMessage("upload-message", "The file is too large — massimo 50 MB.", true);
+    const match = parsedUrl.pathname.match(/^\/(?:details|embed)\/([^/]+)/);
+    if (!match) return setMessage("upload-message", "Usa il link /details/IDENTIFIER oppure /embed/IDENTIFIER.", true);
+
+    const identifier = decodeURIComponent(match[1]);
+    if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) {
+      return setMessage("upload-message", "L'identifier del video non è valido.", true);
     }
 
     const publish = $("publish-btn");
     publish.disabled = true;
-    setMessage("upload-message", "Preparazione del caricamento…");
-    setUploadProgress(0, 0, video.size);
+    setMessage("upload-message", "Pubblicazione in corso…");
+    $("upload-progress").classList.add("hidden");
 
     const id = crypto.randomUUID();
-    const ext = (video.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const videoPath = `videos/${id}.${ext}`;
     let coverPath = null;
+    const archivePath = "archive-" + videoType + ":" + identifier;
 
     try {
-      setMessage("upload-message", "Caricamento video in corso. Non chiudere questa pagina.");
-      await uploadVideoResumable(video, videoPath, (uploaded, total) => {
-        setUploadProgress((uploaded / total) * 100, uploaded, total);
-      });
-
-      setUploadProgress(100, video.size, video.size, cover ? "Caricamento copertina…" : "Video caricato");
-
       if (cover) {
         const coverExt = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-        coverPath = `covers/${id}.${coverExt}`;
-        const { error: coverError } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .upload(coverPath, cover, {
-            contentType: cover.type || "image/jpeg",
-            upsert: false
-          });
+        coverPath = "covers/" + id + "." + coverExt;
+        const { error: coverError } = await supabase.storage.from(STORAGE_BUCKET).upload(coverPath, cover, {
+          contentType: cover.type || "image/jpeg",
+          upsert: false
+        });
         if (coverError) throw coverError;
       }
 
@@ -489,21 +488,19 @@ async function init() {
         title,
         description: $("episode-description").value.trim(),
         episode_number: numberValue ? Number(numberValue) : null,
-        video_path: videoPath,
+        video_path: archivePath,
         cover_path: coverPath
       });
       if (dbError) throw dbError;
 
       $("upload-modal").classList.add("hidden");
-      toast("Episodio pubblicato!");
+      toast(videoType === "short" ? "Short pubblicato!" : "Video pubblicato!");
       await loadEpisodes();
     } catch (error) {
-      await supabase.storage.from(STORAGE_BUCKET)
-        .remove([videoPath, ...(coverPath ? [coverPath] : [])]).catch(() => {});
+      if (coverPath) await supabase.storage.from(STORAGE_BUCKET).remove([coverPath]).catch(() => {});
       setMessage("upload-message", friendlyUploadError(error), true);
     } finally {
       publish.disabled = false;
-      $("upload-progress").classList.add("hidden");
     }
   });
 
