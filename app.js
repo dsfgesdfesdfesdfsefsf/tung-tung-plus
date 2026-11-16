@@ -334,6 +334,16 @@ async function loadEpisodes() {
   if (explore) $("episode-rows").appendChild(explore);
 }
 
+function openEditModal() {
+  if (!isAdmin || !activeEpisode) return;
+  $("edit-form").reset();
+  $("edit-episode-title").value = activeEpisode.title || "";
+  $("edit-episode-number").value = activeEpisode.episode_number ?? "";
+  $("edit-episode-description").value = activeEpisode.description || "";
+  setMessage("edit-message", "");
+  $("edit-modal").classList.remove("hidden");
+}
+
 async function openEpisode(episode) {
   activeEpisode = episode;
   $("player-title").textContent = episode.title;
@@ -342,6 +352,7 @@ async function openEpisode(episode) {
     : "TUNG TUNG+ // PLAYER";
   $("player-description").textContent = episode.description || "Nessuna descrizione disponibile.";
   $("delete-episode").classList.toggle("hidden", !isAdmin);
+  $("edit-episode").classList.toggle("hidden", !isAdmin);
   $("player-modal").classList.remove("hidden");
 
   const video = $("video-player");
@@ -519,6 +530,70 @@ async function init() {
       setMessage("upload-message", friendlyUploadError(error), true);
     } finally {
       publish.disabled = false;
+    }
+  });
+
+  $("edit-episode").addEventListener("click", openEditModal);
+
+  $("edit-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!isAdmin || !activeEpisode) return;
+    const saveButton = $("save-edit-btn");
+    saveButton.disabled = true;
+    setMessage("edit-message", "Salvataggio modifiche…");
+    let newCoverPath = null;
+    try {
+      const cover = $("edit-episode-cover").files[0];
+      const title = $("edit-episode-title").value.trim();
+      const numberValue = $("edit-episode-number").value.trim();
+      const description = $("edit-episode-description").value.trim();
+      if (!title) throw new Error("Inserisci il titolo dell'episodio.");
+
+      if (cover) {
+        const ext = (cover.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+        newCoverPath = "covers/" + crypto.randomUUID() + "." + ext;
+        const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(newCoverPath, cover, {
+          contentType: cover.type || "image/jpeg", upsert: false
+        });
+        if (error) throw error;
+      }
+
+      const isStaticArchive = Boolean(activeEpisode.archive_url) &&
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(activeEpisode.id));
+      const values = {
+        title,
+        description,
+        episode_number: numberValue ? Number(numberValue) : null,
+        video_path: activeEpisode.video_path || ("archive-video:" + activeEpisode.identifier),
+        cover_path: newCoverPath || activeEpisode.cover_path || null
+      };
+
+      let dbResult;
+      if (isStaticArchive) {
+        dbResult = await supabase.from("episodes").insert(values);
+      } else {
+        dbResult = await supabase.from("episodes").update(values).eq("id", activeEpisode.id);
+      }
+      if (dbResult.error) throw dbResult.error;
+
+      if (newCoverPath && activeEpisode.cover_path) {
+        await supabase.storage.from(STORAGE_BUCKET).remove([activeEpisode.cover_path]).catch(() => {});
+      }
+      $("edit-modal").classList.add("hidden");
+      $("player-modal").classList.add("hidden");
+      $("archive-player").removeAttribute("src");
+      $("archive-player").classList.add("hidden");
+      $("video-player").pause();
+      $("video-player").removeAttribute("src");
+      $("video-player").load();
+      activeEpisode = null;
+      await loadEpisodes();
+      toast("Episodio aggiornato!");
+    } catch (error) {
+      if (newCoverPath) await supabase.storage.from(STORAGE_BUCKET).remove([newCoverPath]).catch(() => {});
+      setMessage("edit-message", error.message || "Errore durante il salvataggio.", true);
+    } finally {
+      saveButton.disabled = false;
     }
   });
 
