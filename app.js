@@ -323,7 +323,8 @@ async function openEpisode(episode) {
     ? `TUNG TUNG WAR // EPISODIO ${episode.episode_number}`
     : "TUNG TUNG+ // PLAYER";
   $("player-description").textContent = episode.description || "Nessuna descrizione disponibile.";
-  $("delete-episode").classList.toggle("hidden", !isAdmin);
+  const isArchiveEpisode = Boolean(episode.archive_url) || String(episode.video_path || "").startsWith("archive-");
+  $("delete-episode").classList.toggle("hidden", !isAdmin || isArchiveEpisode);
   $("player-modal").classList.remove("hidden");
 
   const video = $("video-player");
@@ -506,6 +507,10 @@ async function init() {
 
   $("delete-episode").addEventListener("click", async () => {
     if (!isAdmin || !activeEpisode) return;
+    if (activeEpisode.archive_url || String(activeEpisode.video_path || "").startsWith("archive-")) {
+      toast("Questo video è ospitato su Internet Archive e non può essere eliminato da qui.");
+      return;
+    }
     if (!confirm(`Eliminare "${activeEpisode.title}"? Questa operazione non si può annullare.`)) return;
 
     try {
