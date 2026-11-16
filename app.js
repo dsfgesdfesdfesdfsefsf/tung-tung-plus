@@ -222,6 +222,20 @@ function renderRail(title, episodes, covers, suffix, variant = "landscape") {
   return section;
 }
 
+function getHiddenArchiveEpisodeIds() {
+  try {
+    return JSON.parse(localStorage.getItem("tung-tung-plus-hidden-archive-episodes") || "[]");
+  } catch (_) {
+    return [];
+  }
+}
+
+function hideArchiveEpisodeLocally(episodeId) {
+  const hidden = new Set(getHiddenArchiveEpisodeIds());
+  hidden.add(String(episodeId));
+  localStorage.setItem("tung-tung-plus-hidden-archive-episodes", JSON.stringify([...hidden]));
+}
+
 async function loadEpisodes() {
   $("loading").classList.remove("hidden");
   $("hero-slot").innerHTML = "";
@@ -241,6 +255,10 @@ async function loadEpisodes() {
   } else {
     episodesCache = (data && data.length) ? data : ARCHIVE_EPISODES;
   }
+  const hiddenArchiveIds = new Set(getHiddenArchiveEpisodeIds());
+  episodesCache = episodesCache.filter((episode) =>
+    !hiddenArchiveIds.has(String(episode.id))
+  );
   $("episode-count").textContent = `${episodesCache.length} EPISODI`;
 
   if (!episodesCache.length) {
@@ -507,25 +525,41 @@ async function init() {
 
   $("delete-episode").addEventListener("click", async () => {
     if (!isAdmin || !activeEpisode) return;
-    if (activeEpisode.archive_url || String(activeEpisode.video_path || "").startsWith("archive-")) {
-      toast("Questo video è ospitato su Internet Archive e non può essere eliminato da qui.");
-      return;
-    }
-    if (!confirm(`Eliminare "${activeEpisode.title}"? Questa operazione non si può annullare.`)) return;
+    if (!confirm(`Rimuovere "${activeEpisode.title}" da TUNG TUNG+? Il video originale resterà online.`)) return;
 
     try {
-      const paths = [activeEpisode.video_path, activeEpisode.cover_path].filter(Boolean);
-      const { error: dbError } = await supabase.from("episodes").delete().eq("id", activeEpisode.id);
-      if (dbError) throw dbError;
-      const { error: storageError } = await supabase.storage.from(STORAGE_BUCKET).remove(paths);
-      if (storageError) throw storageError;
+      const isArchiveEpisode =
+        Boolean(activeEpisode.archive_url) ||
+        String(activeEpisode.video_path || "").startsWith("archive-");
+
+      if (isArchiveEpisode && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(activeEpisode.id))) {
+        // Static Internet Archive entries have no Supabase row: hide only this catalogue link.
+        hideArchiveEpisodeLocally(activeEpisode.id);
+      } else {
+        // Remove the catalogue row. Never delete the video hosted on Internet Archive.
+        const { error: dbError } = await supabase
+          .from("episodes")
+          .delete()
+          .eq("id", activeEpisode.id);
+        if (dbError) throw dbError;
+
+        // Only remove a TUNG TUNG+ cover file; leave external video links untouched.
+        if (activeEpisode.cover_path) {
+          const { error: storageError } = await supabase
+            .storage.from(STORAGE_BUCKET).remove([activeEpisode.cover_path]);
+          if (storageError) throw storageError;
+        }
+      }
 
       $("player-modal").classList.add("hidden");
       $("video-player").pause();
       $("video-player").removeAttribute("src");
       $("video-player").load();
+      $("archive-player").removeAttribute("src");
+      $("archive-player").classList.add("hidden");
+      activeEpisode = null;
       await loadEpisodes();
-      toast("Episodio eliminato.");
+      toast("Collegamento rimosso da TUNG TUNG+. Il video originale non è stato eliminato.");
     } catch (error) {
       toast(`Errore durante l'eliminazione: ${error.message}`);
     }
