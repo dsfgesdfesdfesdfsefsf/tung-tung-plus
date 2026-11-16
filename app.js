@@ -341,8 +341,7 @@ async function openEpisode(episode) {
     ? `TUNG TUNG WAR // EPISODIO ${episode.episode_number}`
     : "TUNG TUNG+ // PLAYER";
   $("player-description").textContent = episode.description || "Nessuna descrizione disponibile.";
-  const isArchiveEpisode = Boolean(episode.archive_url) || String(episode.video_path || "").startsWith("archive-");
-  $("delete-episode").classList.toggle("hidden", !isAdmin || isArchiveEpisode);
+  $("delete-episode").classList.toggle("hidden", !isAdmin);
   $("player-modal").classList.remove("hidden");
 
   const video = $("video-player");
