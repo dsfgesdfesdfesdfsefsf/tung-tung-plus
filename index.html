@@ -80,12 +80,27 @@
     </div>
   </div>
 
+
+  <div id="edit-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+    <div class="modal-card">
+      <div class="modal-heading"><div><div class="eyebrow">TUNG TUNG+ STUDIO</div><h2 id="edit-title">Modifica episodio</h2></div><button class="modal-close" data-close="edit-modal" aria-label="Chiudi">×</button></div>
+      <form id="edit-form">
+        <label>TITOLO EPISODIO<input id="edit-episode-title" maxlength="160" required></label>
+        <label>NUMERO EPISODIO <span class="optional">(FACOLTATIVO)</span><input id="edit-episode-number" type="number" min="1" step="1"></label>
+        <label>DESCRIZIONE<textarea id="edit-episode-description" rows="3"></textarea></label>
+        <label>MINIATURA <span class="optional">(LASCIA VUOTO PER MANTENERE QUELLA ATTUALE)</span><input id="edit-episode-cover" type="file" accept="image/*"></label>
+        <p id="edit-message" class="message" role="status"></p>
+        <button id="save-edit-btn" class="button primary full" type="submit">SALVA MODIFICHE</button>
+      </form>
+    </div>
+  </div>
+
   <div id="player-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="player-title">
     <div class="player-card">
       <div class="modal-heading"><div class="eyebrow" id="player-number">TUNG TUNG+ PLAYER</div><button class="modal-close" data-close="player-modal" aria-label="Chiudi">×</button></div>
       <video id="video-player" controls playsinline preload="metadata"></video>
       <iframe id="archive-player" class="hidden" title="TUNG TUNG+ video player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer" loading="lazy"></iframe>
-      <div class="player-info"><h2 id="player-title"></h2><p id="player-description"></p><button id="delete-episode" class="button danger hidden" type="button">ELIMINA EPISODIO</button></div>
+      <div class="player-info"><h2 id="player-title"></h2><p id="player-description"></p><div class="player-admin-actions"><button id="edit-episode" class="button ghost hidden" type="button">MODIFICA EPISODIO</button><button id="delete-episode" class="button danger hidden" type="button">ELIMINA EPISODIO</button></div></div>
     </div>
   </div>
 
