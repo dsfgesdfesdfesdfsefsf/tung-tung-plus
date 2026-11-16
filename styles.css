@@ -46,3 +46,5 @@ label{display:grid;gap:7px;color:#aaa;font:700 10px var(--mono);letter-spacing:.
 #upload-form select{width:100%;padding:12px;border:1px solid #333;border-radius:6px;background:#080808;color:#fff;font:12px var(--mono);outline:none}
 #upload-form select:focus{border-color:var(--cyan)}
 #episode-video-link{font-size:11px}
+
+.player-admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.player-admin-actions .button{margin-top:0}
