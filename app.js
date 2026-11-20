@@ -364,18 +364,30 @@ async function openEpisode(episode) {
   archiveFrame.classList.add("hidden");
   archiveFrame.removeAttribute("src");
 
-  if (episode.archive_url || String(episode.video_path || "").startsWith("archive-")) {
-    const archiveIdentifier = String(episode.video_path || "").replace(/^archive-(?:short|video):/, "");
+  const videoPath = String(episode.video_path || "");
+  if (episode.archive_url || videoPath.startsWith("archive-")) {
+    const archiveIdentifier = videoPath.replace(/^archive-(?:short|video):/, "");
     archiveFrame.src = episode.archive_url || `https://archive.org/embed/${encodeURIComponent(archiveIdentifier)}`;
     archiveFrame.classList.remove("hidden");
     return;
   }
 
   try {
-    const url = await getSignedUrl(episode.video_path);
+    let url;
+    if (videoPath.startsWith("external-url:")) {
+      url = videoPath.slice("external-url:".length);
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:" || parsed.hostname !== "share.deepstorage.dev" ||
+          !/\.(mp4|webm|m4v)(?:$|[?#])/i.test(url)) {
+        throw new Error("Il link non è un video MP4/WebM supportato.");
+      }
+    } else {
+      url = await getSignedUrl(videoPath);
+    }
     video.classList.remove("hidden");
     video.src = url;
     video.load();
+    video.onerror = () => toast("Il video non è riproducibile: verifica formato MP4 H.264/WebM e permessi del link.");
     await video.play().catch(() => {});
   } catch (error) {
     toast(`Non riesco ad aprire il video: ${error.message}`);
@@ -479,17 +491,44 @@ async function init() {
 
     let parsedUrl;
     try { parsedUrl = new URL(videoLink); }
-    catch (_) { return setMessage("upload-message", "Inserisci un link valido di Internet Archive.", true); }
+    catch (_) { return setMessage("upload-message", "Inserisci un link valido di Internet Archive o Deep Storage.", true); }
 
-    if (!["archive.org", "www.archive.org"].includes(parsedUrl.hostname)) {
-      return setMessage("upload-message", "Per ora sono supportati i link di archive.org.", true);
+    const isArchive = ["archive.org", "www.archive.org"].includes(parsedUrl.hostname);
+    const isDeepStorage = ["deepstorage.dev", "www.deepstorage.dev", "share.deepstorage.dev"].includes(parsedUrl.hostname);
+    if (!isArchive && !isDeepStorage) {
+      return setMessage("upload-message", "Sono supportati i link di Internet Archive e Deep Storage.", true);
     }
-    const match = parsedUrl.pathname.match(/^\/(?:details|embed)\/([^/]+)/);
-    if (!match) return setMessage("upload-message", "Usa il link /details/IDENTIFIER oppure /embed/IDENTIFIER.", true);
 
-    const identifier = decodeURIComponent(match[1]);
-    if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) {
-      return setMessage("upload-message", "L'identifier del video non è valido.", true);
+    let externalVideoUrl = "";
+    let identifier = "";
+    if (isArchive) {
+      const match = parsedUrl.pathname.match(/^\/(?:details|embed)\/([^/]+)/);
+      if (!match) return setMessage("upload-message", "Usa il link /details/IDENTIFIER oppure /embed/IDENTIFIER.", true);
+      identifier = decodeURIComponent(match[1]);
+      if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) {
+        return setMessage("upload-message", "L'identifier del video non è valido.", true);
+      }
+    } else {
+      if (parsedUrl.hostname === "deepstorage.dev" || parsedUrl.hostname === "www.deepstorage.dev") {
+        if (parsedUrl.pathname !== "/watch") {
+          return setMessage("upload-message", "Usa il link /watch di Deep Storage.", true);
+        }
+        const sharedUrl = parsedUrl.searchParams.get("id");
+        if (!sharedUrl) return setMessage("upload-message", "Il link Deep Storage non contiene il video.", true);
+        try {
+          const shared = new URL(sharedUrl);
+          if (shared.protocol !== "https:" || shared.hostname !== "share.deepstorage.dev") throw new Error();
+          externalVideoUrl = shared.href;
+        } catch (_) {
+          return setMessage("upload-message", "Il link condiviso Deep Storage non è valido.", true);
+        }
+      } else {
+        if (parsedUrl.protocol !== "https:") return setMessage("upload-message", "Usa un link HTTPS.", true);
+        externalVideoUrl = parsedUrl.href;
+      }
+      if (!/\.(mp4|webm|m4v)(?:$|[?#])/i.test(externalVideoUrl)) {
+        return setMessage("upload-message", "Il link AVI può essere salvato solo dopo la conversione: il player richiede MP4 H.264 o WebM.", true);
+      }
     }
 
     const publish = $("publish-btn");
@@ -499,7 +538,9 @@ async function init() {
 
     const id = crypto.randomUUID();
     let coverPath = null;
-    const archivePath = "archive-" + videoType + ":" + identifier;
+    const archivePath = isArchive
+      ? "archive-" + videoType + ":" + identifier
+      : "external-url:" + externalVideoUrl;
 
     try {
       if (cover) {
