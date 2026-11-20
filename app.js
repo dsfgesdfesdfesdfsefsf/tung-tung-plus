@@ -268,6 +268,22 @@ async function loadEpisodes() {
   episodesCache = episodesCache.filter((episode) =>
     !hiddenArchiveIds.has(String(episode.id))
   );
+
+  // Sort numbered episodes by episode number, not upload date.
+  // Episodes without a number are placed after numbered episodes.
+  episodesCache.sort((a, b) => {
+    const numberA = Number(a.episode_number);
+    const numberB = Number(b.episode_number);
+    const hasA = a.episode_number !== null && a.episode_number !== undefined && String(a.episode_number).trim() !== "" && Number.isFinite(numberA);
+    const hasB = b.episode_number !== null && b.episode_number !== undefined && String(b.episode_number).trim() !== "" && Number.isFinite(numberB);
+
+    if (hasA && hasB) return numberA - numberB;
+    if (hasA) return -1;
+    if (hasB) return 1;
+
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+
   $("episode-count").textContent = `${episodesCache.length} EPISODI`;
 
   if (!episodesCache.length) {
@@ -282,7 +298,8 @@ async function loadEpisodes() {
   }));
   const covers = new Map(coverPairs);
 
-  const latest = episodesCache[0];
+  const numberedEpisodes = episodesCache.filter((episode) => Number.isFinite(Number(episode.episode_number)) && episode.episode_number !== null && episode.episode_number !== undefined && String(episode.episode_number).trim() !== "");
+  const latest = numberedEpisodes.length ? numberedEpisodes[numberedEpisodes.length - 1] : episodesCache[0];
   const hero = document.createElement("section");
   hero.className = "hero-dynamic";
   const latestCover = covers.get(latest.id);
@@ -329,9 +346,7 @@ async function loadEpisodes() {
     String(episode.video_path || "").startsWith("archive-short:") ||
     Boolean(episode.is_short)
   );
-  const moreEpisodes = episodesCache.length > 1
-    ? episodesCache.slice(1, 11)
-    : episodesCache.slice(0, 10);
+  const moreEpisodes = episodesCache.filter((episode) => episode.id !== latest.id).slice(0, 10);
   const exploreEpisodes = episodesCache.slice();
 
   const shorts = renderRail("SHORTS", shortEpisodes, covers, "shorts", "shorts");
