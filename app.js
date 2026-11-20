@@ -378,7 +378,7 @@ async function openEpisode(episode) {
       url = videoPath.slice("external-url:".length);
       const parsed = new URL(url);
       if (parsed.protocol !== "https:" || parsed.hostname !== "share.deepstorage.dev" ||
-          !/\\.(mp4|webm|m4v)(?:$|[?#])/i.test(url)) {
+          !/\.(mp4|webm|m4v)(?:$|[?#])/i.test(url)) {
         throw new Error("Il link non è un video MP4/WebM supportato.");
       }
     } else {
@@ -502,7 +502,7 @@ async function init() {
     let externalVideoUrl = "";
     let identifier = "";
     if (isArchive) {
-      const match = parsedUrl.pathname.match(/^\\/(?:details|embed)\\/([^/]+)/);
+      const match = parsedUrl.pathname.match(/^\/(?:details|embed)\/([^/]+)/);
       if (!match) return setMessage("upload-message", "Usa il link /details/IDENTIFIER oppure /embed/IDENTIFIER.", true);
       identifier = decodeURIComponent(match[1]);
       if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) {
@@ -526,7 +526,7 @@ async function init() {
         if (parsedUrl.protocol !== "https:") return setMessage("upload-message", "Usa un link HTTPS.", true);
         externalVideoUrl = parsedUrl.href;
       }
-      if (!/\\.(mp4|webm|m4v)(?:$|[?#])/i.test(externalVideoUrl)) {
+      if (!/\.(mp4|webm|m4v)(?:$|[?#])/i.test(externalVideoUrl)) {
         return setMessage("upload-message", "Il link AVI può essere salvato solo dopo la conversione: il player richiede MP4 H.264 o WebM.", true);
       }
     }
