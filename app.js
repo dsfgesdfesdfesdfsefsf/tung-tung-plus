@@ -277,7 +277,7 @@ async function loadEpisodes() {
     const hasA = a.episode_number !== null && a.episode_number !== undefined && String(a.episode_number).trim() !== "" && Number.isFinite(numberA);
     const hasB = b.episode_number !== null && b.episode_number !== undefined && String(b.episode_number).trim() !== "" && Number.isFinite(numberB);
 
-    if (hasA && hasB) return numberA - numberB;
+    if (hasA && hasB) return numberB - numberA;
     if (hasA) return -1;
     if (hasB) return 1;
 
@@ -299,7 +299,7 @@ async function loadEpisodes() {
   const covers = new Map(coverPairs);
 
   const numberedEpisodes = episodesCache.filter((episode) => Number.isFinite(Number(episode.episode_number)) && episode.episode_number !== null && episode.episode_number !== undefined && String(episode.episode_number).trim() !== "");
-  const latest = numberedEpisodes.length ? numberedEpisodes[numberedEpisodes.length - 1] : episodesCache[0];
+  const latest = numberedEpisodes.length ? numberedEpisodes[0] : episodesCache[0];
   const hero = document.createElement("section");
   hero.className = "hero-dynamic";
   const latestCover = covers.get(latest.id);
