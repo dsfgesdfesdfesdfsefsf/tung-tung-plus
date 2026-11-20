@@ -243,10 +243,19 @@ async function loadEpisodes() {
   $("empty-state").classList.add("hidden");
   setMessage("catalog-message", "");
 
-  const { data, error } = await supabase
-    .from("episodes")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let data = null;
+  let error = null;
+
+  if (supabase) {
+    const result = await supabase
+      .from("episodes")
+      .select("*")
+      .order("created_at", { ascending: false });
+    data = result.data;
+    error = result.error;
+  } else {
+    error = new Error("Archivio online non configurato: mostro gli episodi disponibili localmente.");
+  }
 
   $("loading").classList.add("hidden");
   if (error) {
@@ -409,14 +418,16 @@ async function init() {
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
-  if (!supabaseReady) {
-    showView("setup-view");
-    return;
+  if (supabaseReady) {
+    try {
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      });
+    } catch (error) {
+      console.error("Supabase non disponibile:", error);
+      supabase = null;
+    }
   }
-
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-  });
 
   $("sign-in-open").addEventListener("click", () => {
     $("auth-view").classList.remove("hidden");
@@ -680,11 +691,15 @@ async function init() {
     }
   });
 
-  // The public catalogue opens immediately; the admin code is requested only for publishing.
+  // The public catalogue always opens; the admin code is requested only for publishing.
   enterApp(false);
 }
 
 init().catch((error) => {
-  console.error(error);
-  showView("setup-view");
+  console.error("Errore di avvio TUNG TUNG+:", error);
+  // Keep the site usable even if the online archive cannot initialize.
+  supabase = null;
+  showView("app-view");
+  loadEpisodes();
+  setMessage("catalog-message", "Archivio online non raggiungibile. Mostro i contenuti di riserva.", true);
 });
